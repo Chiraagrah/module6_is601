@@ -10,6 +10,7 @@ A command-line calculator built with Python. It supports common arithmetic opera
 - In-memory calculation history with undo, redo, clear, and configurable history size.
 - CSV history load/save, with automatic saving enabled by default.
 - Calculation logging and automated tests with a 100% coverage threshold.
+- Decorator-based help output that dynamically lists registered operations.
 
 ## Requirements
 
@@ -116,6 +117,8 @@ CALCULATOR_MAX_INPUT_VALUE=10000
 CALCULATOR_PRECISION=2
 ```
 
+Alternatively, copy the tracked safe template (`cp .env.example .env` on macOS/Linux) and edit the values you need. The local `.env` file is ignored by Git.
+
 Relative log and history directories are created automatically in the current working directory. The default log file is `logs/calculator.log`; the default history file is `data/history.csv`.
 
 ## Tests
@@ -133,6 +136,10 @@ python -m pytest --cov-report=html
 ```
 
 Open `htmlcov/index.html` in a browser to view the report.
+
+## Continuous integration
+
+GitHub Actions runs the test suite when changes are pushed to `main` or a pull request targets `main`. The workflow installs dependencies from `requirements.txt` and runs `python -m pytest`. Pytest uses the repository's coverage configuration, so CI fails if total measured coverage falls below 100%.
 
 ## Project structure
 
