@@ -1,21 +1,33 @@
 # app/calculator_repl.py
-import sys
+from functools import wraps
 from app.calculator import Calculator
 from app.operations import OperationFactory
 from app.exceptions import CalculatorError
+from app.logger import setup_logger
+
+
+def include_supported_operations(help_renderer):
+    """Decorate the utility help renderer with the current operation list."""
+    @wraps(help_renderer)
+    def wrapper(self):
+        print("\n=== Calculator REPL ===")
+        print("Supported Operations:")
+        print(f"  {', '.join(OperationFactory.get_supported_operations())}")
+        help_renderer(self)
+
+    return wrapper
+
 
 class CalculatorREPL:
     """Command-line interface implementing the REPL pattern for the calculator."""
     
     def __init__(self):
         self.calculator = Calculator()
+        self.logger = setup_logger(self.calculator.config.log_file)
         
+    @include_supported_operations
     def print_help(self):
         """Displays available commands and operations."""
-        print("\n=== Calculator REPL ===")
-        print("Supported Operations:")
-        ops = OperationFactory.get_supported_operations()
-        print(f"  {', '.join(ops)}")
         print("\nUtility Commands:")
         print("  history       - Display calculation history")
         print("  clear         - Clear calculation history")
@@ -93,8 +105,10 @@ class CalculatorREPL:
                     print(f"Unknown command or operation: '{command}'. Type 'help' for options.")
                     
             except CalculatorError as e:
+                self.logger.warning("Calculator command failed: %s", e)
                 print(f"Error: {e}")
             except Exception as e:
+                self.logger.exception("Unexpected calculator error: %s", e)
                 print(f"Unexpected error: {e}")
 
 if __name__ == "__main__":

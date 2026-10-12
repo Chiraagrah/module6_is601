@@ -2,6 +2,7 @@
 import pytest
 from unittest.mock import patch
 from app.calculator_repl import CalculatorREPL
+from app.operations import Addition, OperationFactory
 
 @patch('builtins.input', side_effect=['add 2 3', 'history', 'clear', 'undo', 'redo', 'help', 'exit'])
 @patch('builtins.print')
@@ -25,15 +26,27 @@ def test_repl_undo_redo_empty(mock_print, mock_input):
     repl = CalculatorREPL()
     repl.run()
 
+def test_help_decorator_includes_registered_operations(monkeypatch, capsys):
+    monkeypatch.setitem(OperationFactory._operations, "test_operation", Addition)
+    repl = CalculatorREPL()
+
+    repl.print_help()
+
+    output = capsys.readouterr().out
+    assert "test_operation" in output
+    assert "history" in output
+
 @patch('builtins.input', side_effect=[
     'undo', 'redo', 'add 1 2', 'divide 1 0', 'subtract 1 2', 'exit'
 ])
 @patch('builtins.print')
-def test_repl_success_and_error_handling(mock_print, mock_input):
+def test_repl_success_and_error_handling(mock_print, mock_input, caplog):
     from decimal import Decimal
     from unittest.mock import patch
     from app.exceptions import OperationError
+    import logging
 
+    caplog.set_level(logging.WARNING, logger="CalculatorLogger")
     repl = CalculatorREPL()
     repl.calculator.config.auto_save = False
     repl.calculator.perform_operation('add', '2', '3')
@@ -55,6 +68,16 @@ def test_repl_success_and_error_handling(mock_print, mock_input):
     assert 'Result: 3' in printed
     assert 'Error: expected calculator error' in printed
     assert 'Unexpected error: unexpected failure' in printed
+    assert any(
+        record.levelname == "WARNING"
+        and "Calculator command failed" in record.message
+        for record in caplog.records
+    )
+    assert any(
+        record.levelname == "ERROR"
+        and "Unexpected calculator error" in record.message
+        for record in caplog.records
+    )
 
 def test_repl_module_entry_point():
     from pathlib import Path
