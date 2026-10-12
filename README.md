@@ -1,4 +1,4 @@
-# Enhanced Calculator
+# Calculator
 
 A command-line calculator built with Python. It supports common arithmetic operations, validates numeric input, keeps a calculation history, and provides undo/redo and CSV persistence.
 
