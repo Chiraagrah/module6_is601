@@ -1,0 +1,6 @@
+#!/home/choreazam/python_web_api/projects/module6_is601/venv/bin/python
+import sys
+from coverage.cmdline import main_deprecated
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main_deprecated())
