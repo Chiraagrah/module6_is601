@@ -10,52 +10,83 @@ from app.exceptions import ValidationError, OperationError, CalculatorError
 from app.calculation import Calculation
 from app.operations import OperationFactory
 
-def test_calculator_operations():
+@pytest.mark.parametrize(
+    ("operation", "operand_a", "operand_b", "expected"),
+    [
+        ("add", "5", "3", "8"),
+        ("subtract", "10", "4", "6"),
+        ("multiply", "3", "4", "12"),
+        ("divide", "10", "2", "5"),
+        ("power", "2", "3", "8"),
+        ("power", "2", "-3", "0.125"),
+        ("root", "9", "2", "3"),
+        ("root", "-8", "3", "-2"),
+        ("modulus", "10", "3", "1"),
+        ("int_divide", "10", "3", "3"),
+        ("percent", "50", "200", "25"),
+        ("abs_diff", "5", "12", "7"),
+    ],
+)
+def test_calculator_operations(operation, operand_a, operand_b, expected):
     calc = Calculator()
-    
-    assert calc.perform_operation("add", "5", "3") == Decimal("8")
-    assert calc.perform_operation("subtract", "10", "4") == Decimal("6")
-    assert calc.perform_operation("multiply", "3", "4") == Decimal("12")
-    assert calc.perform_operation("divide", "10", "2") == Decimal("5")
-    assert calc.perform_operation("power", "2", "3") == Decimal("8")
-    assert calc.perform_operation("root", "9", "2") == Decimal("3")
-    assert calc.perform_operation("modulus", "10", "3") == Decimal("1")
-    assert calc.perform_operation("int_divide", "10", "3") == Decimal("3")
-    assert calc.perform_operation("percent", "50", "200") == Decimal("25")
-    assert calc.perform_operation("abs_diff", "5", "12") == Decimal("7")
 
-def test_operation_errors():
-    calc = Calculator()
-    
-    with pytest.raises(OperationError):
-        calc.perform_operation("divide", "5", "0")
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("modulus", "5", "0")
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("int_divide", "5", "0")
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("percent", "5", "0")
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("root", "-4", "2") # Even root of negative
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("root", "8", "0") # Zero index
-        
-    with pytest.raises(OperationError):
-        calc.perform_operation("unknown_op", "1", "1")
+    assert calc.perform_operation(operation, operand_a, operand_b) == Decimal(expected)
 
-def test_input_validation():
+@pytest.mark.parametrize(
+    ("operation", "operand_a", "operand_b", "message"),
+    [
+        ("divide", "5", "0", "Division by zero"),
+        ("modulus", "5", "0", "Modulus by zero"),
+        ("int_divide", "5", "0", "Integer division by zero"),
+        ("percent", "5", "0", "Percentage base cannot be zero"),
+        ("root", "-4", "2", "odd integer index"),
+        ("root", "8", "0", "Root index cannot be zero"),
+        ("unknown_op", "1", "1", "Unknown operation"),
+    ],
+)
+def test_operation_errors(operation, operand_a, operand_b, message):
     calc = Calculator()
-    
+
+    with pytest.raises(OperationError, match=message):
+        calc.perform_operation(operation, operand_a, operand_b)
+
+@pytest.mark.parametrize(
+    ("operand_a", "operand_b"),
+    [
+        ("-8", "2"),
+        ("-8", "3.5"),
+    ],
+)
+def test_negative_root_rejects_non_odd_integer_indices(operand_a, operand_b):
+    calc = Calculator()
+
+    with pytest.raises(OperationError, match="odd integer index"):
+        calc.perform_operation("root", operand_a, operand_b)
+
+def test_root_of_negative_number_with_odd_index():
+    from unittest.mock import patch
+    from app.operations import Root
+
+    calc = Calculator()
+
+    assert calc.perform_operation("root", "-8", "3") == Decimal("-2")
+
+    with patch("builtins.float", side_effect=OverflowError("float conversion failed")):
+        with pytest.raises(OperationError, match="Root operation failed"):
+            Root().execute(Decimal("-8"), Decimal("3"))
+
+@pytest.mark.parametrize(
+    ("operand_a", "operand_b"),
+    [
+        ("abc", "3"),
+        ("2000000", "3"),
+    ],
+)
+def test_input_validation(operand_a, operand_b):
+    calc = Calculator()
+
     with pytest.raises(ValidationError):
-        calc.perform_operation("add", "abc", "3")
-        
-    with pytest.raises(ValidationError):
-        calc.perform_operation("add", "2000000", "3") # Exceeds max limit
+        calc.perform_operation("add", operand_a, operand_b)
 
 def test_undo_redo_history():
     calc = Calculator()

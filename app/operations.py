@@ -42,8 +42,15 @@ class Root(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if b == 0:
             raise OperationError("Root index cannot be zero.")
-        if a < 0 and b % 2 == 0:
-            raise OperationError("Even root of a negative number is not a real number.")
+        if a < 0:
+            if b != b.to_integral_value() or int(b) % 2 == 0:
+                raise OperationError(
+                    "A negative number only has a real root for an odd integer index."
+                )
+            try:
+                return Decimal(str(-(float(-a) ** (1.0 / float(b)))))
+            except (InvalidOperation, Exception) as e:
+                raise OperationError(f"Root operation failed: {e}") from e
         try:
             return Decimal(str(float(a) ** (1.0 / float(b))))
         except (InvalidOperation, Exception) as e:
