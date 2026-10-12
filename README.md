@@ -11,6 +11,7 @@ A command-line calculator built with Python. It supports common arithmetic opera
 - CSV history load/save, with automatic saving enabled by default.
 - Calculation logging and automated tests with a 100% coverage threshold.
 - Decorator-based help output that dynamically lists registered operations.
+- Color-coded terminal output for results, help, status messages, and errors.
 
 ## Requirements
 

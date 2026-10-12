@@ -1,6 +1,8 @@
 # tests/test_repl.py
 import pytest
+import re
 from unittest.mock import patch
+from colorama import Fore
 from app.calculator_repl import CalculatorREPL
 from app.operations import Addition, OperationFactory
 
@@ -62,7 +64,10 @@ def test_repl_success_and_error_handling(mock_print, mock_input, caplog):
     ):
         repl.run()
 
-    printed = [call.args[0] for call in mock_print.call_args_list]
+    raw_printed = [call.args[0] for call in mock_print.call_args_list]
+    printed = [re.sub(r"\x1b\[[0-9;]*m", "", text) for text in raw_printed]
+    assert any(Fore.GREEN in text for text in raw_printed)
+    assert any(Fore.RED in text for text in raw_printed)
     assert 'Successfully undone last calculation.' in printed
     assert 'Successfully redone calculation.' in printed
     assert 'Result: 3' in printed
