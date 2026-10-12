@@ -32,11 +32,10 @@ class Division(Operation):
 class Power(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         try:
-            # Convert b to int if it's a whole number for cleaner exponentiation when possible
             if b % 1 == 0:
                 return a ** int(b)
             return Decimal(str(float(a) ** float(b)))
-        except Exception as e:
+        except (InvalidOperation, Exception) as e:
             raise OperationError(f"Power operation failed: {e}") from e
 
 class Root(Operation):
@@ -47,9 +46,9 @@ class Root(Operation):
             raise OperationError("Even root of a negative number is not a real number.")
         try:
             return Decimal(str(float(a) ** (1.0 / float(b))))
-        except Exception as e:
+        except (InvalidOperation, Exception) as e:
             raise OperationError(f"Root operation failed: {e}") from e
-
+        
 class Modulus(Operation):
     def execute(self, a: Decimal, b: Decimal) -> Decimal:
         if b == 0:
