@@ -160,12 +160,27 @@ def test_calculation_serialization():
     assert calc_reconstructed.result == Decimal("5")
     assert repr(calc) is not None
 
-def test_config_error_handling(monkeypatch):
+@pytest.mark.parametrize(
+    ("setting", "value", "message"),
+    [
+        ("CALCULATOR_PRECISION", "not_an_int", "CALCULATOR_PRECISION"),
+        ("CALCULATOR_MAX_HISTORY_SIZE", "not_an_int", "CALCULATOR_MAX_HISTORY_SIZE"),
+        ("CALCULATOR_MAX_HISTORY_SIZE", "0", "CALCULATOR_MAX_HISTORY_SIZE"),
+        ("CALCULATOR_PRECISION", "-1", "CALCULATOR_PRECISION"),
+        ("CALCULATOR_MAX_INPUT_VALUE", "not_a_number", "CALCULATOR_MAX_INPUT_VALUE"),
+        ("CALCULATOR_MAX_INPUT_VALUE", "nan", "CALCULATOR_MAX_INPUT_VALUE"),
+        ("CALCULATOR_MAX_INPUT_VALUE", "0", "CALCULATOR_MAX_INPUT_VALUE"),
+        ("CALCULATOR_AUTO_SAVE", "sometimes", "CALCULATOR_AUTO_SAVE"),
+    ],
+)
+def test_invalid_configuration_is_rejected(monkeypatch, tmp_path, setting, value, message):
     from app.calculator_config import CalculatorConfig
     from app.exceptions import ConfigurationError
-    # Force an invalid type conversion to trigger configuration exception
-    monkeypatch.setenv("CALCULATOR_PRECISION", "not_an_int")
-    with pytest.raises(ConfigurationError):
+
+    monkeypatch.setenv("CALCULATOR_LOG_DIR", str(tmp_path / "logs"))
+    monkeypatch.setenv("CALCULATOR_HISTORY_DIR", str(tmp_path / "history"))
+    monkeypatch.setenv(setting, value)
+    with pytest.raises(ConfigurationError, match=message):
         CalculatorConfig()
 
 def test_auto_save_disabled_and_empty_history():
@@ -216,7 +231,7 @@ def test_remaining_coverage_branches():
     assert calc.undo() is False
     assert calc.redo() is False
 
-def test_history_observer_empty_and_failed_autosave(tmp_path):
+def test_history_observer_empty_and_failed_autosave(tmp_path, caplog):
     from unittest.mock import patch
     from app.calculation import Calculation
     from app.history import AutoSaveObserver, HistoryObserver
@@ -245,12 +260,14 @@ def test_history_observer_empty_and_failed_autosave(tmp_path):
     config.auto_save = True
     observer.update(calculation, [])
 
-    with patch("builtins.print") as mock_print, patch.object(
-        pd.DataFrame, "to_csv", side_effect=OSError("disk unavailable")
-    ):
+    with patch.object(pd.DataFrame, "to_csv", side_effect=OSError("disk unavailable")):
         observer.update(calculation, [calculation])
 
-    assert "Warning: Auto-save failed: disk unavailable" in mock_print.call_args.args[0]
+    assert any(
+        record.levelname == "WARNING"
+        and "Auto-save failed: disk unavailable" in record.message
+        for record in caplog.records
+    )
 
 def test_manual_history_persistence_errors_are_wrapped(tmp_path):
     from unittest.mock import patch

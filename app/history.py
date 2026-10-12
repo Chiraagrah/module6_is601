@@ -1,7 +1,6 @@
 # app/history.py
 from abc import ABC, abstractmethod
 import pandas as pd
-from pathlib import Path
 from typing import List
 from app.calculation import Calculation
 from app.calculator_config import CalculatorConfig
@@ -30,6 +29,7 @@ class AutoSaveObserver(HistoryObserver):
     
     def __init__(self, config: CalculatorConfig):
         self.config = config
+        self.logger = setup_logger(config.log_file)
         
     def update(self, calculation: Calculation, history: List[Calculation]):
         if not self.config.auto_save:
@@ -43,5 +43,4 @@ class AutoSaveObserver(HistoryObserver):
             self.config.history_dir.mkdir(parents=True, exist_ok=True)
             df.to_csv(self.config.history_file, index=False, encoding=self.config.default_encoding)
         except Exception as e:
-            # Prevent auto-save failure from crashing the main calculation flow
-            print(f"Warning: Auto-save failed: {e}")
+            self.logger.warning("Auto-save failed: %s", e, exc_info=True)
